@@ -1,36 +1,63 @@
 import requests
-from api_keys import RAPIDAPI_KEY_ZILLOW
+import json
+import datetime
+from api_calls.api_keys import returnZillowKey
 
-def zillowApi_getStreetAddressesForSale(location, pageNum=1):
-    
-    url = "https://zillow56.p.rapidapi.com/search"
-    querystring = {"location":location,"page":pageNum,"status":"forSale"}
-    headers = {
-        "X-RapidAPI-Key": RAPIDAPI_KEY_ZILLOW,
-        "X-RapidAPI-Host": "zillow56.p.rapidapi.com"
+def zillowApi_getAddressesForSale(city, state):
+    location = city + ", " + state
+    pageNum = 1
+    totalPages = 1
+    propertyDict = {
+        'date' : str(datetime.datetime.today()).split()[0]
     }
-    response = requests.get(url, headers=headers, params=querystring)
-
-    totalPages = response.json()['totalPages']
     propertyList = []
-    propertyList = response.json()['results']
 
-    pageNum += 1
-    if (pageNum <= totalPages):
-        propertyList += zillowApi_getStreetAddressesForSale(location, pageNum)
+    while (pageNum <= totalPages):
+        url = "https://zillow-com1.p.rapidapi.com/propertyExtendedSearch"
+        querystring = {"location":location,"page":pageNum,"status":"forSale"}
+        headers = {
+            "X-RapidAPI-Key": returnZillowKey(),
+            "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com"
+        }
+        try:
+            response = requests.get(url, headers=headers, params=querystring)
+            status_code = response.status_code
+            if status_code == 200:
+                totalPages = response.json()['totalPages']
+                propertyList += response.json()['props']
+            else:
+                return {"error": "Failed to fetch data"}
+        except requests.RequestException as e:
+            return {"error": f"RequestException: {e}"}
+        
+        pageNum += 1
+        
+    if response.status_code == 200:
+        propertyDict['results'] = propertyList
+        folder_properties = "results_properties\\"
+        file_path = folder_properties + city + "_" + state + "_properties.json"
+        with open(file_path, 'w') as json_file:
+            json.dump(propertyDict, json_file, indent=4)
 
-    return propertyList
 
-
-def zillowApi_getZoningCode(zpid):
-    url = "https://zillow56.p.rapidapi.com/property"
+def zillowApi_getZoningData(zpid):
+    url = "https://zillow-com1.p.rapidapi.com/property"
     querystring = {"zpid":zpid}
     headers = {
-        "X-RapidAPI-Key": "f51f5f378cmsh90d850ffcf37714p1f4419jsne60010f79e6e",
-        "X-RapidAPI-Host": "zillow56.p.rapidapi.com"
+        "X-RapidAPI-Key": returnZillowKey(),
+        "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com"
     }
-    response = requests.get(url, headers=headers, params=querystring)
-    results = response.json()
-    resoFacts = results['resoFacts']
-    zoning = resoFacts['zoning']
-    return str(zoning)
+    try:
+        response = requests.get(url, headers=headers, params=querystring)
+        status_code = response.status_code
+        if status_code == 200:
+            results = response.json()
+            resoFacts = results['resoFacts']
+            zoning = resoFacts['zoning']
+            zoningDescription = resoFacts['zoningDescription']
+            parcelNumber = resoFacts['parcelNumber']
+            return [str(parcelNumber), str(zoning), str(zoningDescription)]
+        else:
+            return {"error": "Failed to fetch data"}
+    except requests.RequestException as e:
+        return {"error": f"RequestException: {e}"}
