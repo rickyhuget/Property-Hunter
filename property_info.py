@@ -1,66 +1,48 @@
 from api_calls.zillow_api import *
 import json
-import os
+import re
 
-def reviseFile(fileName):
-    f = open(fileName, "r")
-    results = f.read()
-    results = results.replace("True", "true")
-    results = results.replace("False", "false")
-    results = results.replace("\'", "\"")
+def hasSameZoningCode(code, input):
+    match = re.search(code.lower(), input.lower())
+    if (match == None):
+        return False
+    return True
 
-    if os.path.exists(fileName):
-        f = open(fileName, "w")
-        f.write(str(results))
-    else:
-        f = open(fileName, "x")
-        f.write(str(results))
+def saveZoningData(fileName, city, state, zoningCode):
+    folder_properties = "results_properties\\"
+    folder_zoning = "results_zoning\\"
 
-def saveZoningData(fileName):
-    f = open(fileName, "r")
-    data = f.read()
-    propertyList = json.loads(data)
+    file_path = folder_properties + fileName
+    with open(file_path, 'r') as file:
+        resultsDict = json.load(file)
 
-    resultList = []
-    tempList = ['zpid', 'address', 'none']
-    for property in propertyList:
-        zpid = property['zpid']
-        address = property['streetAddress']
-        zoningCode = zillowApi_getZoningCode(zpid)
-        tempList = [zpid, address, zoningCode]
-        resultList.append(tempList)
-
-    newFileName = "currentzoningresults.txt"
-
-    if os.path.exists(newFileName):
-        f = open(newFileName, "w")
-        f.write(json.dumps(resultList))
-    else:
-        f = open(newFileName, "x")
-        f.write(json.dumps(resultList))
+    zoningList = []
+    for property in resultsDict["results"]:
+        tempList = zillowApi_getZoningData(property['zpid'])  # returns: [parcelNumber, zoning, zoningDescription]
+        if ((hasSameZoningCode(zoningCode, tempList[1])) or (hasSameZoningCode(zoningCode, tempList[2]))):
+            zpid = property['zpid']
+            address = property['address']
+            latitude = property['latitude']
+            longitude = property['longitude']
+            parcelNumber = tempList[0]
+            zoning = tempList[1]
+            zoningDescription = tempList[2]
+            
+            tempDict = {
+                "zpid" : zpid,
+                "address" : address,
+                "parcelNumber" : parcelNumber,
+                "latitude" : latitude,
+                "longitude" : longitude,
+                "zoning" : zoning,
+                "zoningDescription" : zoningDescription,
+            }
+            zoningList.append(tempDict)
         
-def saveForSaleData(city, state):
-    location = city + ", " + state
-    results = zillowApi_getStreetAddressesForSale(location)
-
-    #str = date.today()
-    #str = str.replace("-", "_")
-    date = "11_07_2023"
-    newFileName = "results/results_" + date + ".txt"
-
-    if os.path.exists(newFileName):
-        f = open(newFileName, "w")
-        f.write(str(results))
-    else:
-        f = open(newFileName, "x")
-        f.write(str(results))
-
-    print("reviseFile:")
-    reviseFile(newFileName)
-
-    print("saveZoningData:")
-    saveZoningData(newFileName)
-
-
-saveForSaleData("clallam bay", "wa")
-print("End of property results")
+    file_path = folder_zoning + city + "_" + state + "_" + zoningCode + "_zoning.json"
+    with open(file_path, 'w') as json_file:
+        json.dump(zoningList, json_file, indent=4)
+    
+def updatePropertyData(city, state, zoningCode):
+    zillowApi_getAddressesForSale(city, state)
+    saveZoningData(city + "_" + state + "_properties.json", city, state, zoningCode)

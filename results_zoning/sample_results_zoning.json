@@ -1,0 +1,38 @@
+[
+    {
+        "zpid": "2054476466",
+        "address": "Nka W Sequim Bay Rd, Sequim, WA 98382",
+        "parcelNumber": "033021310040",
+        "latitude": 48.077023,
+        "longitude": -123.073364,
+        "zoning": "R4-8",
+        "zoningDescription": "Residential"
+    },
+    {
+        "zpid": "2054476469",
+        "address": "457 W Sequim Bay Rd, Sequim, WA 98382",
+        "parcelNumber": "033021310050",
+        "latitude": 48.077038,
+        "longitude": -123.07462,
+        "zoning": "R4-8",
+        "zoningDescription": "Residential"
+    },
+    {
+        "zpid": "215141821",
+        "address": "W Sequim Bay Rd, Sequim, WA 98382",
+        "parcelNumber": "033021310030",
+        "latitude": 48.07722,
+        "longitude": -123.07223,
+        "zoning": "R4-8",
+        "zoningDescription": "Residential"
+    },
+    {
+        "zpid": "2054563304",
+        "address": "Nka Broadmoor St, Sequim, WA 98382",
+        "parcelNumber": "033021550003",
+        "latitude": 48.079056,
+        "longitude": -123.072945,
+        "zoning": "R4-8",
+        "zoningDescription": "Residential"
+    }
+]
