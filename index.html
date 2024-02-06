@@ -20,10 +20,10 @@
     <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
     <script>
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})
-        ({key: GOOGLEMAPS_API_KEY, v: "weekly"});
+        ({key: "AIzaSyCYdIHVjXvSxE1F44u296YarE_vWzhbxAg", v: "weekly"});
 
         async function initMap() {
-            // Needed libraries.
+            // Libraries
             const { Map, InfoWindow } = await google.maps.importLibrary("maps");
             const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
             "marker",
@@ -31,8 +31,50 @@
             const map = new google.maps.Map(document.getElementById("map"), {
             zoom: 8,
             center: { lat: 48.080, lng: -123.102 },
-            mapId: "ZONING_MAP_ID",
+            mapId: "ZONING_MAP",
             });
+
+            let zoneCoordinates;
+            
+            await fetch('zoning_coordinates/sequim_wa/r20.json')
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                zoneCoordinates = data;
+                for (let i = 0; i < zoneCoordinates.length; i++) {
+                    // Constructing the polygon.
+                    const zonePolygon = new google.maps.Polygon({
+                        paths: zoneCoordinates[i],
+                        strokeColor: "#920F93",
+                        strokeOpacity: 0.8,
+                        strokeWeight: 2,
+                        fillColor: "#920F93",
+                        fillOpacity: 0.35,
+                    });
+                    zonePolygon.setMap(map);
+                }
+                
+            })
+            .catch(error => console.error('Error reading JSON file:', error));
+            
+            locations = [];
+            tempDict = {};
+            await fetch('results_properties/sequim_wa_properties.json')
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                dataList = data["results"];
+                for (let i = 0; i < dataList.length; i++) {
+                    let tempAddress = dataList[i].address;
+                    let tempLatitude = dataList[i].latitude;
+                    let tempLongitude = dataList[i].longitude;
+                    tempDict = {address: tempAddress, lat: tempLatitude, lng: tempLongitude }
+                    locations.push(tempDict);
+                }
+            })
+            .catch(error => console.error('Error reading JSON file:', error));
+
+            // Information windows
             const infoWindow = new google.maps.InfoWindow({
             content: "",
             disableAutoPan: true,
@@ -40,73 +82,27 @@
             // Array of alphabetical characters used to label the markers.
             const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             const markers = locations.map((position, i) => {
-            const label = labels[i % labels.length];
-            const pinGlyph = new google.maps.marker.PinElement({
-                glyph: label,
-                glyphColor: "white",
-            });
-            const marker = new google.maps.marker.AdvancedMarkerElement({
-                position,
-                content: pinGlyph.element,
-            });
-            
-            // open info window when marker is clicked
-            marker.addListener("click", () => {
-                infoWindow.setContent(position.address);
-                infoWindow.open(map, marker);
-            });
-            return marker;
+                const label = labels[i % labels.length];
+                const pinGlyph = new google.maps.marker.PinElement({
+                    glyph: label,
+                    glyphColor: "white",
+                });
+                const marker = new google.maps.marker.AdvancedMarkerElement({
+                    position,
+                    content: pinGlyph.element,
+                });
+                
+                // open info window when marker is clicked
+                marker.addListener("click", () => {
+                    infoWindow.setContent(position.address);
+                    infoWindow.open(map, marker);
+                });
+                return marker;
             });
             
             const markerCluster = new markerClusterer.MarkerClusterer({ markers, map });
-        }   
-
-        // Read JSON file using FileReader
-        const readFile = file => {
-            return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = event => {
-                try {
-                const jsonData = JSON.parse(event.target.result);
-                resolve(jsonData);
-                } catch (error) {
-                reject(error);
-                }
-            };
-            reader.onerror = error => reject(error);
-            reader.readAsText(file);
-            });
-        };
-
-        // Function to handle file input change
-        const handleFileChange = async event => {
-            const fileInput = event.target;
-            const file = fileInput.files[0];
-            locations = [];
-            tempDict = {};
-
-            try {
-            const jsonData = await readFile(file);
-            // Access JSON file properties
-            for (let i = 0; i < jsonData.length; i++) {
-                let tempAddress = jsonData[i].address;
-                let tempLatitude = jsonData[i].latitude;
-                let tempLongitude = jsonData[i].longitude;
-                tempDict = {address: tempAddress, lat: tempLatitude, lng: tempLongitude }
-                locations.push(tempDict);
-            }
-
-            initMap();
-            } catch (error) {
-            console.error('Error reading JSON file:', error.message);
-            }
-        };
-
-        // Input element for file selection
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.addEventListener('change', handleFileChange);
-        document.body.appendChild(fileInput);
+        }
+        initMap();
     </script>
   </body>
 </html>
